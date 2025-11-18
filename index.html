@@ -131,6 +131,7 @@
         <button onclick="showHeatmap()">ヒートマップ表示</button>
         <button onclick="showClusters()">クラスター分析</button>
         <button onclick="resetView()">リセット</button>
+        <button onclick="exportGeoJSON()" style="background-color: #27ae60;">GeoJSONエクスポート</button>
     </div>
 
     <div id="map"></div>
@@ -378,6 +379,51 @@
             document.getElementById('areaFilter').value = 'all';
             applyFilters();
             map.setView(NAGOYA_CENTER, 12);
+        }
+
+        // GeoJSONエクスポート機能
+        function exportGeoJSON() {
+            const brandFilter = document.getElementById('brandFilter').value;
+            const areaFilter = document.getElementById('areaFilter').value;
+
+            // 現在のフィルター条件でデータを取得
+            const filteredData = {
+                type: 'FeatureCollection',
+                features: storeData.features.filter(feature => {
+                    const brandMatch = brandFilter === 'all' || feature.properties.brand === brandFilter;
+                    const areaMatch = areaFilter === 'all' || feature.properties.ward === areaFilter;
+                    return brandMatch && areaMatch;
+                })
+            };
+
+            // エクスポート用のファイル名を生成
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+            let filename = 'nagoya_convenience_stores';
+
+            if (brandFilter !== 'all') {
+                filename += `_${brandFilter}`;
+            }
+            if (areaFilter !== 'all') {
+                filename += `_${areaFilter}`;
+            }
+            filename += `_${timestamp}.geojson`;
+
+            // GeoJSONをBlobとして作成
+            const jsonString = JSON.stringify(filteredData, null, 2);
+            const blob = new Blob([jsonString], { type: 'application/geo+json' });
+
+            // ダウンロードリンクを作成してクリック
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            // 成功メッセージを表示
+            alert(`GeoJSONファイルをエクスポートしました\n\nファイル名: ${filename}\n店舗数: ${filteredData.features.length}件`);
         }
 
         // 初期化処理
